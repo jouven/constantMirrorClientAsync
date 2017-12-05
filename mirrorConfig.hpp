@@ -209,13 +209,13 @@ class mirrorConfig_c : public eines::baseClassQt_c
 public:
 
     quint16 updateServerPort_f() const;
-    uint_fast32_t maxDownloadCountGlobal_f() const;
+    uint_fast32_t maxDownloadGlobalCount_f() const;
     //std::vector<mirrorConfigSourceDestinationMapping_c> sourceDestinationMappings_f() const;
 
     void initialSetup_f();
     void mainLoop_f();
 
-    uint_fast32_t maxCurrentDownloadCount_f() const;
+    uint_fast32_t currentDownloadGlobalCount_f() const;
     void setRemoteHasUpdated_f(const QHostAddress& address_par_con, const quint16 port_par_con);
 };
 

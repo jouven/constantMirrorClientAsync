@@ -2,6 +2,7 @@
 
 //#include "fileHashQtso/fileHashQt.hpp"
 #include "essentialQtso/essentialQt.hpp"
+#include "signalso/signal.hpp"
 
 #include <QHostAddress>
 #include <QDir>
@@ -220,7 +221,10 @@ void downloadClient_c::newRead_f()
 #ifdef DEBUGJOUVEN
     //QOUT_TS("(downloadClient_c::newRead_f()) this->readAll() writeSize " << writeSize << endl);
 #endif
-
+    if (not eines::signal::isRunning_f())
+    {
+        this->disconnectFromHost();
+    }
 }
 
 void downloadClient_c::finishFile_f()
@@ -230,6 +234,7 @@ void downloadClient_c::finishFile_f()
 #endif
     if (file_pri.size() == downloadInfo_pri.size_pub)
     {
+        QOUT_TS("(Successful download " << downloadInfo_pri.destination_pub << endl);
         if (not deleteThenCopy_pri)
         {
             //remove the old file

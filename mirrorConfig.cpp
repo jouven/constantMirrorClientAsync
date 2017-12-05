@@ -331,7 +331,7 @@ void mirrorConfigSourceDestinationMapping_c::checkRemoteFiles_f()
     {
         QJsonDocument jsonDocumentTmp(QJsonDocument::fromJson(destinationJSONByteArray_pri));
 //#ifdef DEBUGJOUVEN
-//        QOUT_TS("(QObject::connect(fileListRequestThreadTmp, &QThread::finished, [this] destinationJSONByteArray_pri " << destinationJSONByteArray_pri << endl);
+        //QOUT_TS("(QObject::connect(fileListRequestThreadTmp, &QThread::finished, [this] destinationJSONByteArray_pri " << destinationJSONByteArray_pri << endl);
 //#endif
         destinationJSONByteArray_pri.clear();
         if (jsonDocumentTmp.isNull())
@@ -445,6 +445,9 @@ void mirrorConfigSourceDestinationMapping_c::checkRemoteFiles_f()
             {
                 initialRemoteScanSet_pri = true;
             }
+#ifdef DEBUGJOUVEN
+            //QOUT_TS("(mirrorConfig_c::checkRemoteFiles_f()) initialRemoteScanSet_pri" << endl);
+#endif
         }
         if (not remoteTriedOnce_pri)
         {
@@ -527,86 +530,145 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
         {
             if (isSingleFile_pri)
             {
-                QFileInfo localFileTmp(destinationPath_pri);
-                if (remoteSingleFileIterated and localFileTmp.exists())
+                if (downloadingQSet_pri.contains(destinationPath_pri))
                 {
-                    auto localFindResultTmp(localFileStatusUMAP_pri.find(destinationPath_pri.toStdString()));
-                    if (localFindResultTmp != localFileStatusUMAP_pri.end())
+                    break;
+                }
+                bool doDownloadTmp(false);
+                QFileInfo localFileTmp(destinationPath_pri);
+                auto localFindResultTmp(localFileStatusUMAP_pri.find(destinationPath_pri.toStdString()));
+                if (localFindResultTmp != localFileStatusUMAP_pri.end())
+                {
+                    localFindResultTmp->second.iterated_pub = remoteSingleFileIterated;
+                    if (remoteSingleFileIterated)
                     {
-                        localFindResultTmp->second.iterated_pub = true;
-                        if (downloadingQSet_pri.contains(destinationPath_pri))
+                        if (localFileTmp.exists())
                         {
-                            break;
-                        }
-                        qint64 datetimeTmp(localFileTmp.lastModified().toMSecsSinceEpoch());
-                        if (localFindResultTmp->second.fileLastModificationDatetime_pub != datetimeTmp)
-                        {
-                            localFindResultTmp->second.fileLastModificationDatetime_pub = datetimeTmp;
-                            localFindResultTmp->second.hash_pub = getFileHash_f(destinationPath_pri);
-                        }
-                        else
-                        {
-                            //filedatetime didn't change, assume nothing has happened locally
-                        }
+                            //check file lastModificationDatetime
+                            qint64 datetimeTmp(localFileTmp.lastModified().toMSecsSinceEpoch());
+                            if (localFindResultTmp->second.fileLastModificationDatetime_pub != datetimeTmp)
+                            {
+                                localFindResultTmp->second.fileLastModificationDatetime_pub = datetimeTmp;
+                                localFindResultTmp->second.hash_pub = getFileHash_f(destinationPath_pri);
+                            }
+                            else
+                            {
+                                //filedatetime didn't change, assume nothing has happened locally
+                            }
 
-                        //compare hashes
-                        if (remoteSingleFileHash != localFindResultTmp->second.hash_pub)
-                        {
-                            QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
-                            //download
-                            downloadingQSet_pri.insert(destinationPath_pri);
-                            filesToDownload_pri.emplace_back(sourcePath_pri, destinationPath_pri, remoteSingleFileSize);
+                            //compare hashes
+                            if (remoteSingleFileHash != localFindResultTmp->second.hash_pub)
+                            {
+                                doDownloadTmp = true;
+                            }
+                            else
+                            {
+                                //same Hash, files are equal, do nothing
+                            }
                         }
                         else
                         {
-                            //same Hash, files are equal, do nothing
+                            //download
+                            doDownloadTmp = true;
                         }
                     }
                     else
                     {
-                        uint_fast64_t hashTmp(getFileHash_f(destinationPath_pri));
-
-                        if (remoteSingleFileHash != hashTmp)
+                        //if exists, remove it
+                        if (localFileTmp.exists() and syncDeletions_pri)
                         {
-                            //add/update the UMap
-                            fileStatus_s fileStatusObj(destinationPath_pri, localFindResultTmp->second.hash_pub, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
-                            fileStatusObj.iterated_pub = true;
-                            localFileStatusUMAP_pri.emplace(destinationPath_pri.toStdString(), fileStatusObj);
-
-                            QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
-                            //download
-                            downloadingQSet_pri.insert(destinationPath_pri);
-                            filesToDownload_pri.emplace_back(sourcePath_pri, destinationPath_pri, remoteSingleFileSize);
+                            //remove local file on the spot
+                            if (not QFile::remove(destinationPath_pri))
+                            {
+                                //#ifdef DEBUGJOUVEN
+                                QOUT_TS("Failed to remove (was deleted on the remote side) file " << destinationPath_pri << endl);
+                                //#endif
+                            }
                         }
                         else
                         {
-                            //same Hash, files are equal, do nothing
+                            //it doesn't exist or no sync deletions
                         }
                     }
                 }
                 else
                 {
-                    //if exists, remove it
-                    if (localFileTmp.exists() and syncDeletions_pri)
+                    if (remoteSingleFileIterated)
                     {
-                        //remove local file on the spot
-                        if (not QFile::remove(destinationPath_pri))
+                        if (localFileTmp.exists())
                         {
-                            //#ifdef DEBUGJOUVEN
-                            QOUT_TS("Failed to remove (was deleted on the remote side) file " << destinationPath_pri << endl);
-                            //#endif
+                            //add to the umap
+                            uint_fast64_t hashTmp(getFileHash_f(destinationPath_pri));
+                            //add/update the UMap
+                            fileStatus_s fileStatusObj(destinationPath_pri, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
+                            fileStatusObj.iterated_pub = true;
+                            localFileStatusUMAP_pri.emplace(destinationPath_pri.toStdString(), fileStatusObj);
+
+                            if (remoteSingleFileHash != hashTmp)
+                            {
+                                doDownloadTmp = true;
+                            }
+                            else
+                            {
+                                //same Hash, files are equal, do nothing
+                            }
+                        }
+                        else
+                        {
+                            //download
+                            doDownloadTmp = true;
                         }
                     }
+                    else
+                    {
+                        //if exists, remove it
+                        if (localFileTmp.exists() and syncDeletions_pri)
+                        {
+                            //remove local file on the spot
+                            if (not QFile::remove(destinationPath_pri))
+                            {
+                                //#ifdef DEBUGJOUVEN
+                                QOUT_TS("Failed to remove (was deleted on the remote side) file " << destinationPath_pri << endl);
+                                //#endif
+                            }
+                        }
+                        else
+                        {
+                            //it doesn't exist or no sync deletions
+                        }
+                    }
+                }
+
+                if (doDownloadTmp)
+                {
+#ifdef DEBUGJOUVEN
+                    //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) downloading " << destinationPath_pri << endl);
+#endif
+                    QOUT_TS("Downloading " << destinationPath_pri << endl);
+                    QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
+                    //download
+                    downloadingQSet_pri.insert(destinationPath_pri);
+                    filesToDownload_pri.emplace_back(sourcePath_pri, destinationPath_pri, remoteSingleFileSize);
                 }
             }
             else
             //directory
             {
+#ifdef DEBUGJOUVEN
+                //QOUT_TS("(mirrorConfig_c::compareLocalAndRemote_f()) directory" << endl);
+#endif
                 for (auto& remoteItem_ite : remoteFileStatusUMAP_pri)
                 {
+                    if (not eines::signal::isRunning_f())
+                    {
+                        break;
+                    }
                     if (//remoteItem_ite.second.filename_pub.startsWith(sourcePath_pri + QDir::separator()) or
                         remoteItem_ite.second.filename_pub.startsWith(sourcePath_pri))
                     {
+#ifdef DEBUGJOUVEN
+                        //QOUT_TS("(mirrorConfig_c::compareLocalAndRemote_f()) remoteItem_ite.second.filename_pub.startsWith(sourcePath_pri)" << endl);
+#endif
                         if (not includeDirectoriesWithFileX_pri.isEmpty())
                         {
                             QFileInfo fileInfoTmp(remoteItem_ite.second.filename_pub);
@@ -678,38 +740,58 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 #ifdef DEBUGJOUVEN
                         //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) finalDestinationTmp " << finalDestinationTmp << endl);
 #endif
+                        QFileInfo localFileTmp(finalDestinationTmp);
                         //try to compare to the local umap
                         auto localFindResultTmp(localFileStatusUMAP_pri.find(finalDestinationTmp.toStdString()));
                         //it's in the UMap
                         if (localFindResultTmp != localFileStatusUMAP_pri.end())
                         {
-                            QFileInfo localFileTmp(finalDestinationTmp);
-                            if (remoteItem_ite.second.iterated_pub and localFileTmp.exists())
+                            localFindResultTmp->second.iterated_pub = true;
+                            //set it to true, because if it's downloading don't remove it from the umap yet,
+                            //theoretically if remoteItem_ite.second.iterated_pub = false the server should cut the download
+                            //and after a cycle it will be removed
+                            if (downloadingQSet_pri.contains(finalDestinationTmp))
                             {
-                                localFindResultTmp->second.iterated_pub = true;
-                                if (downloadingQSet_pri.contains(finalDestinationTmp))
+                                continue;
+                            }
+                            localFindResultTmp->second.iterated_pub = remoteItem_ite.second.iterated_pub;
+                            if (remoteItem_ite.second.iterated_pub)
+                            {
+                                bool doDownloadTmp(false);
+                                if (localFileTmp.exists())
                                 {
-                                    continue;
+                                    qint64 lastModificationDatetimeTmp(localFileTmp.lastModified().toMSecsSinceEpoch());
+                                    if (lastModificationDatetimeTmp != localFindResultTmp->second.fileLastModificationDatetime_pub)
+                                    {
+                                        localFindResultTmp->second.fileLastModificationDatetime_pub = lastModificationDatetimeTmp;
+                                        localFindResultTmp->second.hash_pub = getFileHash_f(finalDestinationTmp);
+                                    }
+
+                                    //compare hashes and download
+                                    if (remoteItem_ite.second.hash_pub != localFindResultTmp->second.hash_pub)
+                                    {
+                                        doDownloadTmp = true;
+                                    }
+                                    else
+                                    {
+                                        //same Hash, files are equal, do nothing
+                                    }
+                                }
+                                else
+                                {
+                                    doDownloadTmp = true;
                                 }
 
-                                qint64 lastModificationDatetimeTmp(localFileTmp.lastModified().toMSecsSinceEpoch());
-                                if (lastModificationDatetimeTmp != localFindResultTmp->second.fileLastModificationDatetime_pub)
+                                if (doDownloadTmp)
                                 {
-                                    localFindResultTmp->second.fileLastModificationDatetime_pub = lastModificationDatetimeTmp;
-                                    localFindResultTmp->second.hash_pub = getFileHash_f(destinationPath_pri);
-                                }
-
-                                //compare hashes and download
-                                if (remoteItem_ite.second.hash_pub != localFindResultTmp->second.hash_pub)
-                                {
+#ifdef DEBUGJOUVEN
+                                    //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) downloading " << finalDestinationTmp << endl);
+#endif
+                                    QOUT_TS("Downloading " << finalDestinationTmp << endl);
                                     QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
                                     //download
                                     downloadingQSet_pri.insert(finalDestinationTmp);
                                     filesToDownload_pri.emplace_back(remoteItem_ite.second.filename_pub, finalDestinationTmp, remoteItem_ite.second.fileSize_pub);
-                                }
-                                else
-                                {
-                                    //same Hash, files are equal, do nothing
                                 }
                             }
                             else
@@ -728,33 +810,57 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         //#endif
                                     }
                                 }
+                                else
+                                {
+                                    //doesn't exist or not syncDeletions
+                                }
                             }
                         }
                         else
                         //doesn't exist in the UMap
                         {
-                            QFileInfo localFileTmp(finalDestinationTmp);
-                            //iterated (remote umap)
-                            if (remoteItem_ite.second.iterated_pub and localFileTmp.exists())
+                            if (downloadingQSet_pri.contains(finalDestinationTmp))
                             {
-                                uint_fast64_t hashTmp(getFileHash_f(destinationPath_pri));
-
-                                //compare hashes and download
-                                if (remoteItem_ite.second.hash_pub != hashTmp)
+                                continue;
+                            }
+                            //iterated (remote umap)
+                            if (remoteItem_ite.second.iterated_pub)
+                            {
+                                bool doDownloadTmp(false);
+                                if (localFileTmp.exists())
                                 {
+                                    uint_fast64_t hashTmp(getFileHash_f(finalDestinationTmp));
                                     //add to the UMap
                                     fileStatus_s fileStatusObj(finalDestinationTmp, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
                                     fileStatusObj.iterated_pub = true;
                                     localFileStatusUMAP_pri.emplace(finalDestinationTmp.toStdString(), fileStatusObj);
 
-                                    QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "local"));
-                                    //download
-                                    downloadingQSet_pri.insert(finalDestinationTmp);
-                                    filesToDownload_pri.emplace_back(remoteItem_ite.second.filename_pub, finalDestinationTmp, remoteItem_ite.second.fileSize_pub);
+                                    //compare hashes and download
+                                    if (remoteItem_ite.second.hash_pub != hashTmp)
+                                    {
+                                        doDownloadTmp = true;
+                                    }
+                                    else
+                                    {
+                                        //same Hash, files are equal, do nothing
+                                    }
                                 }
                                 else
                                 {
-                                    //same Hash, files are equal, do nothing
+                                    //doesn't exist
+                                    doDownloadTmp = true;
+                                }
+
+                                if (doDownloadTmp)
+                                {
+#ifdef DEBUGJOUVEN
+                                    //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) downloading " << finalDestinationTmp << endl);
+#endif
+                                    QOUT_TS("Downloading " << finalDestinationTmp << endl);
+                                    QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
+                                    //download
+                                    downloadingQSet_pri.insert(finalDestinationTmp);
+                                    filesToDownload_pri.emplace_back(remoteItem_ite.second.filename_pub, finalDestinationTmp, remoteItem_ite.second.fileSize_pub);
                                 }
                             }
                             else
@@ -769,6 +875,10 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         QOUT_TS("Failed to remove (was deleted on the remote side) file " << finalDestinationTmp << endl);
                                         //#endif
                                     }
+                                }
+                                else
+                                {
+                                    //it doesn't exist or not sync deletions
                                 }
                             }
                         }
@@ -820,6 +930,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 
         //getAddMutex_f(QString::number(id_pri).toStdString() + "local")->unlock();
         //getAddMutex_f(QString::number(id_pri).toStdString() + "remote")->unlock();
+        QOUT_TS("Finished comparing" << endl);
         break;
     }
 }
@@ -834,19 +945,26 @@ void mirrorConfigSourceDestinationMapping_c::download_f()
     while (
            eines::signal::isRunning_f()
            and currentDownloadCount_pri < maxDownloadCount_pri
-           and mirrorConfig_ext.maxCurrentDownloadCount_f() < mirrorConfig_ext.maxDownloadCountGlobal_f()
+           and mirrorConfig_ext.currentDownloadGlobalCount_f() < mirrorConfig_ext.maxDownloadGlobalCount_f()
            and not filesToDownload_pri.empty()
     )
     {
         currentDownloadCount_pri = currentDownloadCount_pri + 1;
+#ifdef DEBUGJOUVEN
+            //QOUT_TS("mirrorConfigSourceDestinationMapping_c::download_f() currentDownloadCount_pri " << currentDownloadCount_pri << endl);
+            //QOUT_TS("mirrorConfigSourceDestinationMapping_c::download_f() maxDownloadCount_pri " << maxDownloadCount_pri << endl);
+            //QOUT_TS("mirrorConfigSourceDestinationMapping_c::download_f() mirrorConfig_ext.currentDownloadGlobalCount_f() " << mirrorConfig_ext.currentDownloadGlobalCount_f() << endl);
+            //QOUT_TS("mirrorConfigSourceDestinationMapping_c::download_f() mirrorConfig_ext.maxDownloadGlobalCount_f() " << mirrorConfig_ext.maxDownloadGlobalCount_f() << endl);
+            //QOUT_TS("QCoreApplication::exit();"<< endl);
+#endif
         QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
         downloadInfo_s frontItem(filesToDownload_pri.front());
 
         downloadClient_c* downloadClientObj = new downloadClient_c(sourceAddress_pri, sourceDownloadPort_pri, frontItem, deleteThenCopy_pri, qApp);
         QObject::connect(downloadClientObj, &QTcpSocket::destroyed, [=]
         {
-            currentDownloadCount_pri = currentDownloadCount_pri - 1;
-            QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
+            this->currentDownloadCount_pri = this->currentDownloadCount_pri - 1;
+            QMutexLocker lockerTmp1(getAddMutex_f(QString::number(this->id_pri).toStdString() + "download"));
             downloadingQSet_pri.remove(frontItem.destination_pub);
 //            if (filesToDownload_pri.empty())
 //            {
@@ -971,7 +1089,7 @@ quint16 mirrorConfig_c::updateServerPort_f() const
     return updateServerPort_pri;
 }
 
-uint_fast32_t mirrorConfig_c::maxDownloadCountGlobal_f() const
+uint_fast32_t mirrorConfig_c::maxDownloadGlobalCount_f() const
 {
     return maxDownloadCountGlobal_pri;
 }
@@ -1305,7 +1423,7 @@ void mirrorConfig_c::downloadFiles_f()
     }
 }
 
-uint_fast32_t mirrorConfig_c::maxCurrentDownloadCount_f() const
+uint_fast32_t mirrorConfig_c::currentDownloadGlobalCount_f() const
 {
     uint_fast32_t counter(0);
     for (const mirrorConfigSourceDestinationMapping_c& item_ite_con : sourceDestinationMappings_pri)
@@ -1368,7 +1486,6 @@ void mirrorConfig_c::setRemoteHasUpdated_f(
 
 void mirrorConfig_c::mainLoop_f()
 {
-    //QOUT_TS("mirrorConfig_c::mainLoop() start" << endl);
     //QOUT_TS("operationsConfig_c::mainLoop() qthreads counter " << QThreadCount_f() << endl);
     if (eines::signal::isRunning_f())
     {
@@ -1410,7 +1527,7 @@ void mirrorConfig_c::mainLoop_f()
     }
     else
     {
-        if (eines::signal::threadCount_f() > 1 or qThreadCount_f() > 0)
+        if (eines::signal::threadCount_f() > 1 or qThreadCount_f() > 0 or currentDownloadGlobalCount_f() > 0)
         {
 //            QOUT_TS("qthreads counter " << QThreadCount_f() << endl);
 //            QOUT_TS("eines::signal::threadCount_f() " << eines::signal::threadCount_f() << endl);
@@ -1423,9 +1540,9 @@ void mirrorConfig_c::mainLoop_f()
         else
         {
 #ifdef DEBUGJOUVEN
-            QOUT_TS("qthreads counter " << qThreadCount_f() << endl);
-            QOUT_TS("eines::signal::threadCount_f() " << eines::signal::threadCount_f() << endl);
-            QOUT_TS("QCoreApplication::exit();"<< endl);
+            //QOUT_TS("qthreads counter " << qThreadCount_f() << endl);
+            //QOUT_TS("eines::signal::threadCount_f() " << eines::signal::threadCount_f() << endl);
+            //QOUT_TS("QCoreApplication::exit();"<< endl);
 #endif
             QCoreApplication::exit();
         }
