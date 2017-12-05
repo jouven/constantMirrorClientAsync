@@ -1,5 +1,5 @@
 # constantMirrorClientAsync
-Client-side program that mirrors remote paths to the local filesystem using tcp sockets. A V2 of https://github.com/jouven/constantMirrorClient, the reasoning is that recently I tried to rsync a folder with files 5xx GB size wise using the checksum flag "-c", rsync, much like my first version of this program, first must generate ALL the hashes before starting any data transmission. This version allows to download each file after it has been hashed so a client can start downloading before waiting for the server to hash everything first.
+Client-side program that mirrors remote paths to the local filesystem using tcp sockets. A V2 of https://github.com/jouven/constantMirrorClient, the reasoning is that recently I tried to rsync a folder with files, 5xx GB, using the checksum flag "-c", rsync, like my first version of this program, first must generate ALL the hashes before starting any data transmission. This version allows to download each file after it has been hashed so a client can start downloading before waiting for the server to hash everything first.
 
 Compilation
 -----------
