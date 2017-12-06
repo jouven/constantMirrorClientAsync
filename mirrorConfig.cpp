@@ -1,6 +1,5 @@
 #include "mirrorConfig.hpp"
 
-#include "updateServer.hpp"
 #include "fileListRequestClientThread.hpp"
 #include "downloadClient.hpp"
 
@@ -1367,6 +1366,7 @@ R"({
         QOUT_TS("Errors:\n" << errorStr << endl);
         returnValue_ext = EXIT_FAILURE;
         eines::signal::stopRunning_f();
+        QCoreApplication::quit();
         return;
     }
     else
@@ -1386,7 +1386,7 @@ R"({
             QSslConfiguration::setDefaultConfiguration(sslOptions);
 
             //start the update server
-            new updateServer_c(
+            updateServer_pri = new updateServer_c(
                         selfServerAddress_pri
                         , updateServerPort_pri
                         , qApp
@@ -1535,6 +1535,7 @@ void mirrorConfig_c::mainLoop_f()
             if (mainLoopTimer_pri->interval() != 10)
             {
                 mainLoopTimer_pri->start(10);
+                updateServer_pri->close();
             }
         }
         else

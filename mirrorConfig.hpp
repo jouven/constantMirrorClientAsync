@@ -2,6 +2,7 @@
 #ifndef CMC_MIRRORCONFIG_HPP
 #define CMC_MIRRORCONFIG_HPP
 
+#include "updateServer.hpp"
 #include "baseClassQtso/baseClassQt.hpp"
 #include "fileHashQtso/fileHashQt.hpp"
 
@@ -206,6 +207,7 @@ class mirrorConfig_c : public eines::baseClassQt_c
     void write_f(QJsonObject &json) const;
 
     QTimer* mainLoopTimer_pri;
+    updateServer_c* updateServer_pri;
 public:
 
     quint16 updateServerPort_f() const;

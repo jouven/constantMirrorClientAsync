@@ -234,7 +234,7 @@ void downloadClient_c::finishFile_f()
 #endif
     if (file_pri.size() == downloadInfo_pri.size_pub)
     {
-        QOUT_TS("(Successful download " << downloadInfo_pri.destination_pub << endl);
+        QOUT_TS("Successful download " << downloadInfo_pri.destination_pub << endl);
         if (not deleteThenCopy_pri)
         {
             //remove the old file
