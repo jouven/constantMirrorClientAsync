@@ -5,6 +5,8 @@ A V2 of https://github.com/jouven/constantMirrorClient, the reasoning is that re
 
 This version allows to download each file after it has been hashed so a client can start downloading before waiting for the server to hash everything first.
 
+Works with https://github.com/jouven/constantMirrorServerAsync
+
 Compilation
 -----------
 Requires:
