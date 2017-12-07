@@ -149,10 +149,10 @@ void mirrorConfigSourceDestinationMapping_c::read_f(const QJsonObject &json)
     includeSubdirectories_pri = json["includeSubdirectories"].toBool(true);
     includeDirectoriesWithFileX_pri = json["includeDirectoriesWithFileX"].toString();
     noSubdirectoriesInDestination_pri = json["noSubdirectoriesInDestination"].toBool(false);
-    if (not json["localCheckIntervalMilliseconds"].isUndefined())
-    {
-        localCheckIntervalMilliseconds_pri = json["localCheckIntervalMilliseconds"].toInt(1000);
-    }
+//    if (not json["localCheckIntervalMilliseconds"].isUndefined())
+//    {
+//        localCheckIntervalMilliseconds_pri = json["localCheckIntervalMilliseconds"].toInt(1000);
+//    }
     if (not json["remoteCheckIntervalMilliseconds"].isUndefined())
     {
         remoteCheckIntervalMilliseconds_pri = json["remoteCheckIntervalMilliseconds"].toInt(15000);
@@ -180,7 +180,7 @@ void mirrorConfigSourceDestinationMapping_c::write_f(QJsonObject &json) const
     json["includeSubdirectories"] = includeSubdirectories_pri;
     json["includeDirectoriesWithFileX"] = includeDirectoriesWithFileX_pri;
     json["noSubdirectoriesInDestination"] = noSubdirectoriesInDestination_pri;
-    json["localCheckIntervalMilliseconds"] = localCheckIntervalMilliseconds_pri;
+//    json["localCheckIntervalMilliseconds"] = localCheckIntervalMilliseconds_pri;
     json["remoteCheckIntervalMilliseconds"] = remoteCheckIntervalMilliseconds_pri;
     json["syncDeletions"] = syncDeletions_pri;
     json["deleteThenCopy"] = deleteThenCopy_pri;
@@ -465,15 +465,9 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
     {
         return;
     }
-    //if (initialLocalScanSet_pri and initialRemoteScanSet_pri and compareRequired_pri and currentDownloadCount_pri == 0)
-    while (initialRemoteScanSet_pri and currentDownloadCount_pri == 0)
+    while (initialRemoteScanSet_pri)
     {
-        //compareRequired_pri = false;
-
-        //QMutexLocker MlockerLocalTmp(getAddMutex_f(QString::number(id_pri).toStdString() + "local"));
         QMutexLocker MlockerRemoteTmp(getAddMutex_f(QString::number(id_pri).toStdString() + "remote"));
-        //getAddMutex_f(QString::number(id_pri).toStdString() + "local")->lock();
-        //getAddMutex_f(QString::number(id_pri).toStdString() + "remote")->lock();
 
         //preliminary check to see if the configured source matches entirely one file (one file mirror) or a substring (folder mirroring)
         uint_fast64_t remoteSingleFileHash(0);
@@ -1040,19 +1034,19 @@ void mirrorConfigSourceDestinationMapping_c::checkValid_f()
         }
     }
 
-    if (localCheckIntervalMilliseconds_pri < 1)
-    {
-        appendError_f("Local check interval time is invalid " + localCheckIntervalMilliseconds_pri);
-        isValidTmp = false;
-    }
+//    if (localCheckIntervalMilliseconds_pri < 1)
+//    {
+//        appendError_f("Local check interval time is invalid " + localCheckIntervalMilliseconds_pri);
+//        isValidTmp = false;
+//    }
     if (remoteCheckIntervalMilliseconds_pri < 1)
     {
         appendError_f("Remote check interval time is invalid " + remoteCheckIntervalMilliseconds_pri);
         isValidTmp = false;
     }
-    if (localCheckIntervalMilliseconds_pri > 0 and remoteCheckIntervalMilliseconds_pri > 0)
+    if (remoteCheckIntervalMilliseconds_pri > 0)
     {
-        gcdWaitMilliseconds_pri = boost::math::gcd(localCheckIntervalMilliseconds_pri, remoteCheckIntervalMilliseconds_pri);
+        gcdWaitMilliseconds_pri = remoteCheckIntervalMilliseconds_pri;
     }
 
     isValid_pri = isValidTmp;

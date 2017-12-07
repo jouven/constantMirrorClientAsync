@@ -77,7 +77,7 @@ class mirrorConfigSourceDestinationMapping_c : public eines::baseClassQt_c
     bool noSubdirectoriesInDestination_pri = false;
 
     //"source"/"destination" how often to check local files for changes
-    qint64 localCheckIntervalMilliseconds_pri = 1000;
+    //qint64 localCheckIntervalMilliseconds_pri = 1000;
     //"destination" only how often to request the list from the "source" server and check for file changes
     //although the server will try to notify the changes to the clients that connected previously, if they disconnected or the server goes down...
     //just check the server again, the timeout of this period will be refreshed if the server notifies the client first
@@ -92,7 +92,7 @@ class mirrorConfigSourceDestinationMapping_c : public eines::baseClassQt_c
     bool deleteThenCopy_pri = false;
 
 
-    int_fast64_t localLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    //int_fast64_t localLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     int_fast64_t remoteLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
     //serialized/deserialized fields END
