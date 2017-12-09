@@ -11,12 +11,14 @@ class fileListRequestClientSocket_c : public QSslSocket
     Q_OBJECT
 
     //if it's passed in the ctor the pointer is saved here
-    QByteArray* destinationByteArrayRef_pri;
+    QByteArray* const destinationByteArrayRef_pri_con;
+    const QString password_pri_con;
+
 public:
-    explicit fileListRequestClientSocket_c(
-            const QHostAddress& address_par_con
+    explicit fileListRequestClientSocket_c(const QHostAddress& address_par_con
             , const quint16 port_par_con
-            , QByteArray* destinationByteArrayRef_par = nullptr
+            , QByteArray * const destinationByteArrayRef_par_con = nullptr
+            , const QString& password_par_con = QString()
             , QObject * parent_par = nullptr
     );
 private Q_SLOTS:

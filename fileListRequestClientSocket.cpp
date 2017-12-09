@@ -4,12 +4,16 @@
 
 #include "essentialQtso/essentialQt.hpp"
 
+#include <QJsonDocument>
+
 fileListRequestClientSocket_c::fileListRequestClientSocket_c(const QHostAddress &address_par_con
         , const quint16 port_par_con
-        , QByteArray *destinationByteArrayRef_par
+        , QByteArray *const destinationByteArrayRef_par_con
+        , const QString &password_par_con
         , QObject *parent_par) :
     QSslSocket(parent_par)
-    , destinationByteArrayRef_pri(destinationByteArrayRef_par)
+    , destinationByteArrayRef_pri_con(destinationByteArrayRef_par_con)
+  , password_pri_con(password_par_con)
 
 {
     connect(this, &QSslSocket::encrypted, this, &fileListRequestClientSocket_c::connected_f);
@@ -51,7 +55,19 @@ fileListRequestClientSocket_c::fileListRequestClientSocket_c(const QHostAddress 
 void fileListRequestClientSocket_c::connected_f()
 {
     QByteArray byteArrayTmp;
-    byteArrayTmp.append(QString::number(mirrorConfig_ext.updateServerPort_f()));
+    if (not password_pri_con.isEmpty())
+    {
+        requestWithPass_c requestWithPasswordTmp(QString::number(mirrorConfig_ext.updateServerPort_f()), password_pri_con);
+        QJsonObject jsonObjectTmp;
+        requestWithPasswordTmp.write_f(jsonObjectTmp);
+        QJsonDocument jsonDocumentTmp(jsonObjectTmp);
+
+        byteArrayTmp.append(jsonDocumentTmp.toJson(QJsonDocument::Compact));
+    }
+    else
+    {
+        byteArrayTmp.append(QString::number(mirrorConfig_ext.updateServerPort_f()));
+    }
     this->write(byteArrayTmp.data(), byteArrayTmp.size());
     //valid flush because the server is waiting for the port first
     this->flush();
@@ -65,7 +81,7 @@ void fileListRequestClientSocket_c::readyRead_f()
 #ifdef DEBUGJOUVEN
     //QOUT_TS("fileListRequestClientSocket_c::readyRead_f() " << this->bytesAvailable() << endl);
 #endif
-    destinationByteArrayRef_pri->append(this->readAll());
+    destinationByteArrayRef_pri_con->append(this->readAll());
 }
 
 //void fileListRequestClientSocket_c::disconnected_f()

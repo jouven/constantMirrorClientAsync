@@ -17,6 +17,25 @@
 #include <unordered_map>
 //#include <unordered_set>
 
+class requestWithPass_c
+{
+    QString data_pri;
+    QString password_pri;
+public:
+    requestWithPass_c() = default;
+    requestWithPass_c(
+            const QString& data_par_con
+            , const QString& password_par_con = QString()
+    );
+
+    void read_f(const QJsonObject &json);
+    void write_f(QJsonObject &json) const;
+
+    QString password_f() const;
+    QString data_f() const;
+};
+
+
 struct fileStatusArrayPlusHostInfo_s : public fileStatusArray_s
 {
     QString hostStr_pub;
@@ -76,13 +95,13 @@ class mirrorConfigSourceDestinationMapping_c : public eines::baseClassQt_c
     //for directory paths, copy every source, be it on the root or on a subdirectory, to the destination root path, not creating any subdirectory on the destination
     bool noSubdirectoriesInDestination_pri = false;
 
-    //"source"/"destination" how often to check local files for changes
-    //qint64 localCheckIntervalMilliseconds_pri = 1000;
+    //how often compare the remote list to the local files
+    qint64 compareCheckIntervalMilliseconds_pri = 10000;
     //"destination" only how often to request the list from the "source" server and check for file changes
     //although the server will try to notify the changes to the clients that connected previously, if they disconnected or the server goes down...
     //just check the server again, the timeout of this period will be refreshed if the server notifies the client first
     //mandatory
-    qint64 remoteCheckIntervalMilliseconds_pri = 5000;
+    qint64 remoteCheckIntervalMilliseconds_pri = 10000;
 
     //mirror remote deletions locally, this only happens when client and server are running (fine)
     //and on the server side a file is removed that was being listed/shared and it doesn't appear on the list anymore
@@ -91,9 +110,10 @@ class mirrorConfigSourceDestinationMapping_c : public eines::baseClassQt_c
     //otherwise rename first, copies and if successful then deletes the renamed
     bool deleteThenCopy_pri = false;
 
-
-    //int_fast64_t localLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    int_fast64_t compareLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     int_fast64_t remoteLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    QString password_pri;
 
     //serialized/deserialized fields END
 

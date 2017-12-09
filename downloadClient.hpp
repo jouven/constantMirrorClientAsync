@@ -17,6 +17,7 @@ class downloadClient_c : public QSslSocket
     QFile file_pri;
     bool firstRead_pri = true;
     bool deleteThenCopy_pri = false;
+    const QString password_pri_con;
 
 public:
     explicit downloadClient_c(
@@ -24,6 +25,7 @@ public:
             , const quint16 port_par_con
             , const downloadInfo_s& downloadInfo_par_con
             , const bool deleteThenCopy_par_con
+            , const QString& password_par_con
             , QObject *parent = nullptr);
 private Q_SLOTS:
     void successfulConnection_f();

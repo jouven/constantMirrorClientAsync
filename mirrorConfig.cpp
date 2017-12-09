@@ -159,6 +159,7 @@ void mirrorConfigSourceDestinationMapping_c::read_f(const QJsonObject &json)
     }
     syncDeletions_pri = json["syncDeletions"].toBool(true);
     deleteThenCopy_pri = json["deleteThenCopy"].toBool(false);
+    password_pri = json["password"].toString();
 }
 
 void mirrorConfigSourceDestinationMapping_c::write_f(QJsonObject &json) const
@@ -184,6 +185,7 @@ void mirrorConfigSourceDestinationMapping_c::write_f(QJsonObject &json) const
     json["remoteCheckIntervalMilliseconds"] = remoteCheckIntervalMilliseconds_pri;
     json["syncDeletions"] = syncDeletions_pri;
     json["deleteThenCopy"] = deleteThenCopy_pri;
+    json["password"] = password_pri;
 }
 
 void mirrorConfigSourceDestinationMapping_c::setRemoteHasUpdated_f()
@@ -323,9 +325,10 @@ void mirrorConfigSourceDestinationMapping_c::checkRemoteFiles_f()
                 sourceAddress_pri
                 , sourceRequestPort_pri
                 , &destinationJSONByteArray_pri
+                , password_pri
                 , qApp
     );
-    //this is not threaded?, maybe lamdas are, only the requesting/reading the json data from the server
+    //this lambda is not threaded
     QObject::connect(fileListRequestThreadTmp, &QThread::finished, [this]
     {
         QJsonDocument jsonDocumentTmp(QJsonDocument::fromJson(destinationJSONByteArray_pri));
@@ -465,6 +468,17 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
     {
         return;
     }
+    //if the last checked interval + interval time is greater than the current time --> skip
+    if ((compareLastCheckedIntervalMilliseconds_pri + compareCheckIntervalMilliseconds_pri) > std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count())
+    {
+        //do nothing
+        return;
+    }
+    else
+    {
+        compareLastCheckedIntervalMilliseconds_pri = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
     while (initialRemoteScanSet_pri)
     {
         QMutexLocker MlockerRemoteTmp(getAddMutex_f(QString::number(id_pri).toStdString() + "remote"));
@@ -472,7 +486,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
         //preliminary check to see if the configured source matches entirely one file (one file mirror) or a substring (folder mirroring)
         uint_fast64_t remoteSingleFileHash(0);
         bool remoteSingleFileIterated(false);
-        int_fast64_t remoteSingleFileSize(0);
+        uint_fast64_t remoteSingleFileSize(0);
         isSingleFileSet_pri = false;
 //        if (not isSingleFileSet_pri)
 //        {
@@ -537,20 +551,32 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                     {
                         if (localFileTmp.exists())
                         {
+                            bool sizeMismatch(false);
+
                             //check file lastModificationDatetime
                             qint64 datetimeTmp(localFileTmp.lastModified().toMSecsSinceEpoch());
                             if (localFindResultTmp->second.fileLastModificationDatetime_pub != datetimeTmp)
                             {
                                 localFindResultTmp->second.fileLastModificationDatetime_pub = datetimeTmp;
-                                localFindResultTmp->second.hash_pub = getFileHash_f(destinationPath_pri);
+                                //if the size is different, this alone is enough to download
+                                //anyway the "new" file after the download won't match, the date will be different,
+                                //the size will be the same and it will be necessary to hash it
+                                if (localFindResultTmp->second.fileSize_pub != remoteSingleFileSize)
+                                {
+                                    sizeMismatch = true;
+                                }
+                                else
+                                {
+                                    localFindResultTmp->second.hash_pub = getFileHash_f(destinationPath_pri);
+                                }
                             }
                             else
                             {
                                 //filedatetime didn't change, assume nothing has happened locally
                             }
 
-                            //compare hashes
-                            if (remoteSingleFileHash != localFindResultTmp->second.hash_pub)
+                            //if size changed or hashes differ
+                            if (sizeMismatch or remoteSingleFileHash != localFindResultTmp->second.hash_pub)
                             {
                                 doDownloadTmp = true;
                             }
@@ -590,14 +616,22 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                     {
                         if (localFileTmp.exists())
                         {
-                            //add to the umap
-                            uint_fast64_t hashTmp(getFileHash_f(destinationPath_pri));
+                            bool sizeMismatch(false);
+                            uint_fast64_t hashTmp(0);
+                            if (localFileTmp.size() != remoteSingleFileSize)
+                            {
+                                sizeMismatch = true;
+                            }
+                            else
+                            {
+                                hashTmp = getFileHash_f(destinationPath_pri);
+                            }
                             //add/update the UMap
                             fileStatus_s fileStatusObj(destinationPath_pri, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
                             fileStatusObj.iterated_pub = true;
                             localFileStatusUMAP_pri.emplace(destinationPath_pri.toStdString(), fileStatusObj);
 
-                            if (remoteSingleFileHash != hashTmp)
+                            if (sizeMismatch or remoteSingleFileHash != hashTmp)
                             {
                                 doDownloadTmp = true;
                             }
@@ -753,15 +787,24 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                 bool doDownloadTmp(false);
                                 if (localFileTmp.exists())
                                 {
+                                    bool sizeMismatch(false);
+
                                     qint64 lastModificationDatetimeTmp(localFileTmp.lastModified().toMSecsSinceEpoch());
                                     if (lastModificationDatetimeTmp != localFindResultTmp->second.fileLastModificationDatetime_pub)
                                     {
                                         localFindResultTmp->second.fileLastModificationDatetime_pub = lastModificationDatetimeTmp;
-                                        localFindResultTmp->second.hash_pub = getFileHash_f(finalDestinationTmp);
+                                        if (localFindResultTmp->second.fileSize_pub != remoteItem_ite.second.fileSize_pub)
+                                        {
+                                            sizeMismatch = true;
+                                        }
+                                        else
+                                        {
+                                            localFindResultTmp->second.hash_pub = getFileHash_f(finalDestinationTmp);
+                                        }
                                     }
 
-                                    //compare hashes and download
-                                    if (remoteItem_ite.second.hash_pub != localFindResultTmp->second.hash_pub)
+                                    //if size changed or hashes differ
+                                    if (sizeMismatch or remoteItem_ite.second.hash_pub != localFindResultTmp->second.hash_pub)
                                     {
                                         doDownloadTmp = true;
                                     }
@@ -822,14 +865,23 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                 bool doDownloadTmp(false);
                                 if (localFileTmp.exists())
                                 {
-                                    uint_fast64_t hashTmp(getFileHash_f(finalDestinationTmp));
+                                    bool sizeMismatch(false);
+                                    uint_fast64_t hashTmp(0);
+                                    if (localFileTmp.size() != remoteItem_ite.second.fileSize_pub)
+                                    {
+                                        sizeMismatch = true;
+                                    }
+                                    else
+                                    {
+                                        hashTmp = getFileHash_f(finalDestinationTmp);
+                                    }
                                     //add to the UMap
                                     fileStatus_s fileStatusObj(finalDestinationTmp, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
                                     fileStatusObj.iterated_pub = true;
                                     localFileStatusUMAP_pri.emplace(finalDestinationTmp.toStdString(), fileStatusObj);
 
                                     //compare hashes and download
-                                    if (remoteItem_ite.second.hash_pub != hashTmp)
+                                    if (sizeMismatch or remoteItem_ite.second.hash_pub != hashTmp)
                                     {
                                         doDownloadTmp = true;
                                     }
@@ -953,7 +1005,7 @@ void mirrorConfigSourceDestinationMapping_c::download_f()
         QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
         downloadInfo_s frontItem(filesToDownload_pri.front());
 
-        downloadClient_c* downloadClientObj = new downloadClient_c(sourceAddress_pri, sourceDownloadPort_pri, frontItem, deleteThenCopy_pri, qApp);
+        downloadClient_c* downloadClientObj = new downloadClient_c(sourceAddress_pri, sourceDownloadPort_pri, frontItem, deleteThenCopy_pri, password_pri, qApp);
         QObject::connect(downloadClientObj, &QTcpSocket::destroyed, [=]
         {
             this->currentDownloadCount_pri = this->currentDownloadCount_pri - 1;
@@ -1388,23 +1440,23 @@ R"({
             //no need it will be destroyed with the qcoreapplication instance when the program ends
             //QObject::connect(updateServerObj, &QTcpServer::destroyed, updateServerObj, &QObject::deleteLater);
 
-            int_fast64_t tmpCycleTimeoutMilliseconds((gcdWaitMillisecondsAll_pri / 4) - 1);
-            if (tmpCycleTimeoutMilliseconds < 1)
-            {
-                tmpCycleTimeoutMilliseconds = 1;
-            }
-            //else if the machine goes down it might not wait for the program to finish
-            if (tmpCycleTimeoutMilliseconds > 5000)
-            {
-                tmpCycleTimeoutMilliseconds = 5000;
-            }
+//            int_fast64_t tmpCycleTimeoutMilliseconds((gcdWaitMillisecondsAll_pri / 4) - 1);
+//            if (tmpCycleTimeoutMilliseconds < 1)
+//            {
+//                tmpCycleTimeoutMilliseconds = 1;
+//            }
+//            //else if the machine goes down it might not wait for the program to finish
+//            if (tmpCycleTimeoutMilliseconds > 5000)
+//            {
+//                tmpCycleTimeoutMilliseconds = 5000;
+//            }
 
             mainLoopTimer_pri = new QTimer(qApp);
             QObject::connect(mainLoopTimer_pri, &QTimer::timeout, std::bind(&mirrorConfig_c::mainLoop_f, &mirrorConfig_ext));
 #ifdef DEBUGJOUVEN
-            QOUT_TS("operationsConfig_c::initialSetup_f() tmpCycleTimeout " << tmpCycleTimeoutMilliseconds << endl);
+            //QOUT_TS("operationsConfig_c::initialSetup_f() tmpCycleTimeout " << tmpCycleTimeoutMilliseconds << endl);
 #endif
-            mainLoopTimer_pri->start(tmpCycleTimeoutMilliseconds);
+            mainLoopTimer_pri->start(5);
         }
     }
 }
@@ -1572,3 +1624,32 @@ void fileStatusArrayPlusHostInfo_s::write_f(QJsonObject &json) const
     json["host"] = hostStr_pub;
 }
 
+
+requestWithPass_c::requestWithPass_c(
+        const QString &data_par_con
+        , const QString &password_par_con)
+    : data_pri(data_par_con)
+    , password_pri(password_par_con)
+{}
+
+void requestWithPass_c::read_f(const QJsonObject &json)
+{
+    data_pri = json["data"].toString();
+    password_pri = json["password"].toString();
+}
+
+void requestWithPass_c::write_f(QJsonObject &json) const
+{
+    json["data"] = data_pri;
+    json["password"] = password_pri;
+}
+
+QString requestWithPass_c::data_f() const
+{
+    return data_pri;
+}
+
+QString requestWithPass_c::password_f() const
+{
+    return password_pri;
+}

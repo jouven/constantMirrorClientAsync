@@ -10,14 +10,18 @@
 #include <QSslConfiguration>
 #include <QFile>
 #include <QSslKey>
+#include <QJsonDocument>
 
 downloadClient_c::downloadClient_c(const QHostAddress& address_par_con
         , const quint16 port_par_con
         , const downloadInfo_s &downloadInfo_par_con
-        , const bool deleteThenCopy_par_con, QObject *parent)
+        , const bool deleteThenCopy_par_con
+        , const QString &password_par_con
+        , QObject *parent)
     : QSslSocket(parent)
     , downloadInfo_pri(downloadInfo_par_con)
     , deleteThenCopy_pri(deleteThenCopy_par_con)
+    , password_pri_con(password_par_con)
 {
     connect(this, &QSslSocket::encrypted, this, &downloadClient_c::successfulConnection_f);
     connect(this, &QTcpSocket::readyRead, this, &downloadClient_c::newRead_f);
@@ -139,7 +143,19 @@ void downloadClient_c::successfulConnection_f()
 #ifdef DEBUGJOUVEN
             //QOUT_TS("(downloadClient_c::successfulConnection_f) sourceFileFullPath_pri " << sourceFileFullPath_pri << endl);
 #endif
-            byteArrayTmp.append(downloadInfo_pri.source_pub);
+            if (not password_pri_con.isEmpty())
+            {
+                requestWithPass_c requestWithPasswordTmp(downloadInfo_pri.source_pub, password_pri_con);
+                QJsonObject jsonObjectTmp;
+                requestWithPasswordTmp.write_f(jsonObjectTmp);
+                QJsonDocument jsonDocumentTmp(jsonObjectTmp);
+
+                byteArrayTmp.append(jsonDocumentTmp.toJson(QJsonDocument::Compact));
+            }
+            else
+            {
+                byteArrayTmp.append(downloadInfo_pri.source_pub);
+            }
             this->write(byteArrayTmp.data(), byteArrayTmp.size());
             //this flush is alright because else the client might wait before sending more stuff when what's required
             //is for the server to receive the sourceFile so it can start sending it to the client
