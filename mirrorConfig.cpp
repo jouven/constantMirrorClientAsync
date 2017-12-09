@@ -481,6 +481,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 
     while (initialRemoteScanSet_pri)
     {
+        bool anyChange(false);
         QMutexLocker MlockerRemoteTmp(getAddMutex_f(QString::number(id_pri).toStdString() + "remote"));
 
         //preliminary check to see if the configured source matches entirely one file (one file mirror) or a substring (folder mirroring)
@@ -671,6 +672,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 #ifdef DEBUGJOUVEN
                     //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) downloading " << destinationPath_pri << endl);
 #endif
+                    anyChange = true;
                     QOUT_TS("Downloading " << destinationPath_pri << endl);
                     QMutexLocker lockerTmp1(getAddMutex_f(QString::number(id_pri).toStdString() + "download"));
                     //download
@@ -820,6 +822,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 
                                 if (doDownloadTmp)
                                 {
+                                    anyChange = true;
 #ifdef DEBUGJOUVEN
                                     //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) downloading " << finalDestinationTmp << endl);
 #endif
@@ -844,6 +847,10 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         //#ifdef DEBUGJOUVEN
                                         QOUT_TS("Failed to remove (was deleted on the remote side) file " << finalDestinationTmp << endl);
                                         //#endif
+                                    }
+                                    else
+                                    {
+                                        anyChange = true;
                                     }
                                 }
                                 else
@@ -898,6 +905,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 
                                 if (doDownloadTmp)
                                 {
+                                    anyChange = true;
 #ifdef DEBUGJOUVEN
                                     //QOUT_TS("(mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f) downloading " << finalDestinationTmp << endl);
 #endif
@@ -919,6 +927,10 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         //#ifdef DEBUGJOUVEN
                                         QOUT_TS("Failed to remove (was deleted on the remote side) file " << finalDestinationTmp << endl);
                                         //#endif
+                                    }
+                                    else
+                                    {
+                                        anyChange = true;
                                     }
                                 }
                                 else
@@ -975,7 +987,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 
         //getAddMutex_f(QString::number(id_pri).toStdString() + "local")->unlock();
         //getAddMutex_f(QString::number(id_pri).toStdString() + "remote")->unlock();
-        QOUT_TS("Finished comparing" << endl);
+        QOUT_TS("Finished comparing changed=" << anyChange << endl);
         break;
     }
 }
@@ -1011,13 +1023,6 @@ void mirrorConfigSourceDestinationMapping_c::download_f()
             this->currentDownloadCount_pri = this->currentDownloadCount_pri - 1;
             QMutexLocker lockerTmp1(getAddMutex_f(QString::number(this->id_pri).toStdString() + "download"));
             downloadingQSet_pri.remove(frontItem.destination_pub);
-//            if (filesToDownload_pri.empty())
-//            {
-//                //so compareLocalAndRemote waits for the local scan of this mapping after a "download phase"
-//                //because otherwise it will have the old hashes on the local side and it might try to download
-//                //the same files again
-//                initialLocalScanSet_pri = false;
-//            }
         });
         QObject::connect(downloadClientObj, &QTcpSocket::disconnected, downloadClientObj, &QObject::deleteLater);
         filesToDownload_pri.erase(filesToDownload_pri.begin());
@@ -1374,7 +1379,9 @@ R"({
 
 "sourceDestinationMappings[x].syncDeletions" optional, sync remote deletions that happen while this process is running, on the destination, replacing will always happen despite this option, true by default
 
-"sourceDestinationMappings[x].deleteThenCopy" optional, if true delete the original and then download, if false rename original then download and finally delete original, false by default)");
+"sourceDestinationMappings[x].deleteThenCopy" optional, if true delete the original and then download, if false rename original then download and finally delete original, false by default
+
+"sourceDestinationMappings[x].password" optional, if the server has a password set, the client must also have it set, otherwise it will get disconnected on any request)");
                     break;
         }
 
