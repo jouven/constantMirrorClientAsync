@@ -79,7 +79,7 @@ void downloadClient_c::successfulConnection_f()
                 }
                 else
                 {
-                    QOUT_TS("Failed to remove local file " << destinationFileInfoTmp.absoluteFilePath() << " before downloading it from server" << endl);
+                    QOUT_TS("Failed to remove local file " << destinationFileInfoTmp.absoluteFilePath() << " before downloading it from server, skipping this file" << endl);
                     this->disconnectFromHost();
                     return;
                 }
@@ -93,7 +93,8 @@ void downloadClient_c::successfulConnection_f()
                 else
                 {
                     //#ifdef DEBUGJOUVEN
-                    QOUT_TS("Failed to rename local file " << destinationFileInfoTmp.absoluteFilePath() << " before downloading it from server" << endl);
+                    QOUT_TS("Failed to rename local file " << destinationFileInfoTmp.absoluteFilePath() << " before downloading it from server, skipping this file" << endl);
+                    failedToRename_pri = true;
                     this->disconnectFromHost();
                     return;
                     //#endif
@@ -205,14 +206,19 @@ void downloadClient_c::newRead_f()
             if (firstChar == '1')
             {
                 isknownErrorTmp = true;
-                QOUT_TS("Download file not found in the server " << downloadInfo_pri.source_pub << endl);
+                QOUT_TS("Download filename is empty " << downloadInfo_pri.source_pub << endl);
             }
             if (firstChar == '2')
             {
                 isknownErrorTmp = true;
-                QOUT_TS("Download file not found in the server (it existed previously) " << downloadInfo_pri.source_pub << endl);
+                QOUT_TS("Download file not found in the server " << downloadInfo_pri.source_pub << endl);
             }
             if (firstChar == '3')
+            {
+                isknownErrorTmp = true;
+                QOUT_TS("Download file not found in the server (it existed previously) " << downloadInfo_pri.source_pub << endl);
+            }
+            if (firstChar == '4')
             {
                 isknownErrorTmp = true;
                 QOUT_TS("File reading error in the server " << downloadInfo_pri.source_pub << endl);
@@ -248,6 +254,10 @@ void downloadClient_c::finishFile_f()
 #ifdef DEBUGJOUVEN
     //QOUT_TS("(downloadClient_c::finishFile_f) " << endl);
 #endif
+    if (failedToRename_pri)
+    {
+        return;
+    }
     if (file_pri.size() == downloadInfo_pri.size_pub)
     {
         QOUT_TS("Successful download " << downloadInfo_pri.destination_pub << endl);

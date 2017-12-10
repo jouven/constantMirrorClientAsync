@@ -629,7 +629,6 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                             }
                             //add/update the UMap
                             fileStatus_s fileStatusObj(destinationPath_pri, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
-                            fileStatusObj.iterated_pub = true;
                             localFileStatusUMAP_pri.emplace(destinationPath_pri.toStdString(), fileStatusObj);
 
                             if (sizeMismatch or remoteSingleFileHash != hashTmp)
@@ -884,7 +883,6 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                     }
                                     //add to the UMap
                                     fileStatus_s fileStatusObj(finalDestinationTmp, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
-                                    fileStatusObj.iterated_pub = true;
                                     localFileStatusUMAP_pri.emplace(finalDestinationTmp.toStdString(), fileStatusObj);
 
                                     //compare hashes and download

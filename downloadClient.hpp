@@ -18,6 +18,7 @@ class downloadClient_c : public QSslSocket
     bool firstRead_pri = true;
     bool deleteThenCopy_pri = false;
     const QString password_pri_con;
+    bool failedToRename_pri = false;
 
 public:
     explicit downloadClient_c(
