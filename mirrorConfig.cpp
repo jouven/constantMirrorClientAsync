@@ -985,7 +985,12 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 
         //getAddMutex_f(QString::number(id_pri).toStdString() + "local")->unlock();
         //getAddMutex_f(QString::number(id_pri).toStdString() + "remote")->unlock();
-        QOUT_TS("Finished comparing changed=" << anyChange << endl);
+        QOUT_TS("Finished comparing changed=" << anyChange);
+        if (downloadingQSet_pri.isEmpty())
+        {
+            QOUT_TS(" and no downloads running");
+        }
+        QOUT_TS(endl);
         break;
     }
 }
