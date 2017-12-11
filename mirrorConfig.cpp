@@ -487,6 +487,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
         //preliminary check to see if the configured source matches entirely one file (one file mirror) or a substring (folder mirroring)
         uint_fast64_t remoteSingleFileHash(0);
         bool remoteSingleFileIterated(false);
+        bool remoteSingleFileHashed(false);
         uint_fast64_t remoteSingleFileSize(0);
         isSingleFileSet_pri = false;
 //        if (not isSingleFileSet_pri)
@@ -498,6 +499,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                 isSingleFileSet_pri = true;
                 isSingleFile_pri = true;
                 remoteSingleFileHash = remoteItem_ite.second.hash_pub;
+                remoteSingleFileHashed = remoteItem_ite.second.hashed_pub;
                 remoteSingleFileIterated = remoteItem_ite.second.iterated_pub;
                 remoteSingleFileSize  = remoteItem_ite.second.fileSize_pub;
                 break;
@@ -569,6 +571,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                 else
                                 {
                                     localFindResultTmp->second.hash_pub = getFileHash_f(destinationPath_pri);
+                                    localFindResultTmp->second.hashed_pub = true;
                                 }
                             }
                             else
@@ -577,13 +580,25 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                             }
 
                             //if size changed or hashes differ
-                            if (sizeMismatch or remoteSingleFileHash != localFindResultTmp->second.hash_pub)
+                            if (sizeMismatch or (
+                                    remoteSingleFileHashed
+                                    and localFindResultTmp->second.hashed_pub
+                                    and remoteSingleFileHash != localFindResultTmp->second.hash_pub))
                             {
                                 doDownloadTmp = true;
                             }
                             else
                             {
+                                //remote might not be hashed yet or
                                 //same Hash, files are equal, do nothing
+
+                                //this theoretically impossible, because it means that after download
+                                //the NEW file is the same size as the remote but the date didn't change... so it did not
+                                //get hashed, so just in case...
+                                if (not localFindResultTmp->second.hashed_pub and not sizeMismatch)
+                                {
+                                    QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
+                                }
                             }
                         }
                         else
@@ -629,15 +644,31 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                             }
                             //add/update the UMap
                             fileStatus_s fileStatusObj(destinationPath_pri, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
+                            if (sizeMismatch)
+                            {
+                                fileStatusObj.hashed_pub = false;
+                            }
                             localFileStatusUMAP_pri.emplace(destinationPath_pri.toStdString(), fileStatusObj);
 
-                            if (sizeMismatch or remoteSingleFileHash != hashTmp)
+                            if (sizeMismatch or (
+                                    fileStatusObj.hashed_pub
+                                    and remoteSingleFileHashed
+                                    and remoteSingleFileHash != hashTmp))
                             {
                                 doDownloadTmp = true;
                             }
                             else
                             {
+                                //remote might not be hashed yet or
                                 //same Hash, files are equal, do nothing
+
+                                //this theoretically impossible, because it means that after download
+                                //the NEW file is the same size as the remote but the date didn't change... so it did not
+                                //get hashed, so just in case...
+                                if (not fileStatusObj.hashed_pub and not sizeMismatch)
+                                {
+                                    QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
+                                }
                             }
                         }
                         else
@@ -801,17 +832,30 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         else
                                         {
                                             localFindResultTmp->second.hash_pub = getFileHash_f(finalDestinationTmp);
+                                            localFindResultTmp->second.hashed_pub = true;
                                         }
                                     }
 
                                     //if size changed or hashes differ
-                                    if (sizeMismatch or remoteItem_ite.second.hash_pub != localFindResultTmp->second.hash_pub)
+                                    if (sizeMismatch or (
+                                            remoteItem_ite.second.hashed_pub
+                                            and localFindResultTmp->second.hashed_pub
+                                            and remoteItem_ite.second.hash_pub != localFindResultTmp->second.hash_pub))
                                     {
                                         doDownloadTmp = true;
                                     }
                                     else
                                     {
+                                        //remote might not be hashed yet or
                                         //same Hash, files are equal, do nothing
+
+                                        //this theoretically impossible, because it means that after download
+                                        //the NEW file is the same size as the remote but the date didn't change... so it did not
+                                        //get hashed, so just in case...
+                                        if (not localFindResultTmp->second.hashed_pub and not sizeMismatch)
+                                        {
+                                            QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
+                                        }
                                     }
                                 }
                                 else
@@ -883,16 +927,32 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                     }
                                     //add to the UMap
                                     fileStatus_s fileStatusObj(finalDestinationTmp, hashTmp, localFileTmp.lastModified().toMSecsSinceEpoch(), localFileTmp.size());
+                                    if (sizeMismatch)
+                                    {
+                                        fileStatusObj.hashed_pub = false;
+                                    }
                                     localFileStatusUMAP_pri.emplace(finalDestinationTmp.toStdString(), fileStatusObj);
 
                                     //compare hashes and download
-                                    if (sizeMismatch or remoteItem_ite.second.hash_pub != hashTmp)
+                                    if (sizeMismatch or (
+                                            fileStatusObj.hashed_pub
+                                            and remoteItem_ite.second.hashed_pub
+                                            and remoteItem_ite.second.hash_pub != hashTmp))
                                     {
                                         doDownloadTmp = true;
                                     }
                                     else
                                     {
+                                        //remote might not be hashed yet or
                                         //same Hash, files are equal, do nothing
+
+                                        //this theoretically impossible, because it means that after download
+                                        //the NEW file is the same size as the remote but the date didn't change... so it did not
+                                        //get hashed, so just in case...
+                                        if (not fileStatusObj.hashed_pub and not sizeMismatch)
+                                        {
+                                            QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
+                                        }
                                     }
                                 }
                                 else
