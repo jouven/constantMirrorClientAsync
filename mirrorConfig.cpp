@@ -924,8 +924,8 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                     uint_fast64_t hashTmp(0);
                                     if (localFileTmp.size() != remoteItem_ite.second.fileSize_pub)
                                     {
-                                        QOUT_TS("localFileTmp.size() " << localFileTmp.size() << endl);
-                                        QOUT_TS("remoteItem_ite.second.fileSize_pub " << remoteItem_ite.second.fileSize_pub << endl);
+                                        //QOUT_TS("localFileTmp.size() " << localFileTmp.size() << endl);
+                                        //QOUT_TS("remoteItem_ite.second.fileSize_pub " << remoteItem_ite.second.fileSize_pub << endl);
                                         sizeMismatch = true;
                                     }
                                     else
