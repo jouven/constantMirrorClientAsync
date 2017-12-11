@@ -2,6 +2,8 @@
 
 #include "mirrorConfig.hpp"
 
+#include "signalso/signal.hpp"
+
 #include "essentialQtso/essentialQt.hpp"
 
 #include <QJsonDocument>
@@ -82,6 +84,10 @@ void fileListRequestClientSocket_c::readyRead_f()
     //QOUT_TS("fileListRequestClientSocket_c::readyRead_f() " << this->bytesAvailable() << endl);
 #endif
     destinationByteArrayRef_pri_con->append(this->readAll());
+    if (not eines::signal::isRunning_f())
+    {
+        this->disconnectFromHost();
+    }
 }
 
 //void fileListRequestClientSocket_c::disconnected_f()

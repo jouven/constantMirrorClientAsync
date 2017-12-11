@@ -561,6 +561,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                             if (localFindResultTmp->second.fileLastModificationDatetime_pub != datetimeTmp)
                             {
                                 localFindResultTmp->second.fileLastModificationDatetime_pub = datetimeTmp;
+                                localFindResultTmp->second.fileSize_pub = localFileTmp.size();
                                 //if the size is different, this alone is enough to download
                                 //anyway the "new" file after the download won't match, the date will be different,
                                 //the size will be the same and it will be necessary to hash it
@@ -592,13 +593,14 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                 //remote might not be hashed yet or
                                 //same Hash, files are equal, do nothing
 
+                                //OK this below is possible IF the client downloaded a file and hashed it before the server has hashed it
                                 //this theoretically impossible, because it means that after download
                                 //the NEW file is the same size as the remote but the date didn't change... so it did not
                                 //get hashed, so just in case...
-                                if (not localFindResultTmp->second.hashed_pub and not sizeMismatch)
-                                {
-                                    QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
-                                }
+//                                if (not localFindResultTmp->second.hashed_pub and not sizeMismatch)
+//                                {
+//                                    QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
+//                                }
                             }
                         }
                         else
@@ -662,13 +664,14 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                 //remote might not be hashed yet or
                                 //same Hash, files are equal, do nothing
 
+                                //OK this below is possible IF the client downloaded a file and hashed it before the server has hashed it
                                 //this theoretically impossible, because it means that after download
                                 //the NEW file is the same size as the remote but the date didn't change... so it did not
                                 //get hashed, so just in case...
-                                if (not fileStatusObj.hashed_pub and not sizeMismatch)
-                                {
-                                    QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
-                                }
+//                                if (not fileStatusObj.hashed_pub and not sizeMismatch)
+//                                {
+//                                    QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
+//                                }
                             }
                         }
                         else
@@ -825,6 +828,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                     if (lastModificationDatetimeTmp != localFindResultTmp->second.fileLastModificationDatetime_pub)
                                     {
                                         localFindResultTmp->second.fileLastModificationDatetime_pub = lastModificationDatetimeTmp;
+                                        localFindResultTmp->second.fileSize_pub = localFileTmp.size();
                                         if (localFindResultTmp->second.fileSize_pub != remoteItem_ite.second.fileSize_pub)
                                         {
                                             sizeMismatch = true;
@@ -849,13 +853,14 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         //remote might not be hashed yet or
                                         //same Hash, files are equal, do nothing
 
+                                        //OK this below is possible IF the client downloaded a file and hashed it before the server has hashed it
                                         //this theoretically impossible, because it means that after download
                                         //the NEW file is the same size as the remote but the date didn't change... so it did not
                                         //get hashed, so just in case...
-                                        if (not localFindResultTmp->second.hashed_pub and not sizeMismatch)
-                                        {
-                                            QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
-                                        }
+//                                        if (not localFindResultTmp->second.hashed_pub and not sizeMismatch)
+//                                        {
+//                                            QOUT_TS("File after download not hashed and same size as remote " << finalDestinationTmp << endl);
+//                                        }
                                     }
                                 }
                                 else
@@ -919,6 +924,8 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                     uint_fast64_t hashTmp(0);
                                     if (localFileTmp.size() != remoteItem_ite.second.fileSize_pub)
                                     {
+                                        QOUT_TS("localFileTmp.size() " << localFileTmp.size() << endl);
+                                        QOUT_TS("remoteItem_ite.second.fileSize_pub " << remoteItem_ite.second.fileSize_pub << endl);
                                         sizeMismatch = true;
                                     }
                                     else
@@ -946,13 +953,14 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
                                         //remote might not be hashed yet or
                                         //same Hash, files are equal, do nothing
 
+                                        //OK this below is possible IF the client downloaded a file and hashed it before the server has hashed it
                                         //this theoretically impossible, because it means that after download
                                         //the NEW file is the same size as the remote but the date didn't change... so it did not
                                         //get hashed, so just in case...
-                                        if (not fileStatusObj.hashed_pub and not sizeMismatch)
-                                        {
-                                            QOUT_TS("File after download not hashed and same size as remote " << destinationPath_pri << endl);
-                                        }
+//                                        if (not fileStatusObj.hashed_pub and not sizeMismatch)
+//                                        {
+//                                            QOUT_TS("File after download not hashed and same size as remote " << finalDestinationTmp << endl);
+//                                        }
                                     }
                                 }
                                 else
@@ -1648,9 +1656,8 @@ void mirrorConfig_c::mainLoop_f()
 //            QOUT_TS("qthreads counter " << QThreadCount_f() << endl);
 //            QOUT_TS("eines::signal::threadCount_f() " << eines::signal::threadCount_f() << endl);
             //change the interval and wait another cycle
-            if (mainLoopTimer_pri->interval() != 10)
+            if (updateServer_pri->isListening())
             {
-                mainLoopTimer_pri->start(10);
                 updateServer_pri->close();
             }
         }
