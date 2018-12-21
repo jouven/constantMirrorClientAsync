@@ -243,7 +243,7 @@ void downloadClient_c::newRead_f()
 #ifdef DEBUGJOUVEN
     //QOUT_TS("(downloadClient_c::newRead_f()) this->readAll() writeSize " << writeSize << endl);
 #endif
-    if (not eines::signal::isRunning_f())
+    if (not signalso::isRunning_f())
     {
         this->disconnectFromHost();
     }

@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     MACRO_signalHandler
 
     //thread for the main program qt stuff
-    eines::signal::launchThread_f([&]()
+    signalso::launchThread_f([&]()
     {
         QCoreApplication qtapp(argc, argv);
 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
         returnValue_ext = qtapp.exec();
     });
 
-    while (not eines::signal::isTheEnd_f())
+    while (not signalso::isTheEnd_f())
     {}
 
     return returnValue_ext;

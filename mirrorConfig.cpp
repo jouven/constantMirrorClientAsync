@@ -195,7 +195,7 @@ void mirrorConfigSourceDestinationMapping_c::setRemoteHasUpdated_f()
 
 //void mirrorConfigSourceDestinationMapping_c::localScan_f()
 //{
-//    if (not eines::signal::isRunning_f())
+//    if (not signalso::isRunning_f())
 //    {
 //        return;
 //    }
@@ -289,7 +289,7 @@ void mirrorConfigSourceDestinationMapping_c::setRemoteHasUpdated_f()
 
 void mirrorConfigSourceDestinationMapping_c::checkRemoteFiles_f()
 {
-    if (not eines::signal::isRunning_f())
+    if (not signalso::isRunning_f())
     {
         return;
     }
@@ -464,7 +464,7 @@ void mirrorConfigSourceDestinationMapping_c::checkRemoteFiles_f()
 
 void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 {
-    if (not eines::signal::isRunning_f())
+    if (not signalso::isRunning_f())
     {
         return;
     }
@@ -721,7 +721,7 @@ void mirrorConfigSourceDestinationMapping_c::compareLocalAndRemote_f()
 #endif
                 for (auto& remoteItem_ite : remoteFileStatusUMAP_pri)
                 {
-                    if (not eines::signal::isRunning_f())
+                    if (not signalso::isRunning_f())
                     {
                         break;
                     }
@@ -1071,7 +1071,7 @@ void mirrorConfigSourceDestinationMapping_c::download_f()
     }
 
     while (
-           eines::signal::isRunning_f()
+           signalso::isRunning_f()
            and currentDownloadCount_pri < maxDownloadCount_pri
            and mirrorConfig_ext.currentDownloadGlobalCount_f() < mirrorConfig_ext.maxDownloadGlobalCount_f()
            and not filesToDownload_pri.empty()
@@ -1489,7 +1489,7 @@ R"({
     {
         QOUT_TS("Errors:\n" << errorStr << endl);
         returnValue_ext = EXIT_FAILURE;
-        eines::signal::stopRunning_f();
+        signalso::stopRunning_f();
         QCoreApplication::quit();
         return;
     }
@@ -1611,7 +1611,7 @@ void mirrorConfig_c::setRemoteHasUpdated_f(
 void mirrorConfig_c::mainLoop_f()
 {
     //QOUT_TS("operationsConfig_c::mainLoop() qthreads counter " << QThreadCount_f() << endl);
-    if (eines::signal::isRunning_f())
+    if (signalso::isRunning_f())
     {
         if (not tryPrintRemoteFileListOnceAndQuit_pri)
         {
@@ -1642,7 +1642,7 @@ void mirrorConfig_c::mainLoop_f()
             {
                 //print files per mapping/server and then quit
                 printAllRemoteFileLists_f();
-                eines::signal::stopRunning_f();
+                signalso::stopRunning_f();
             }
         }
 
@@ -1651,10 +1651,10 @@ void mirrorConfig_c::mainLoop_f()
     }
     else
     {
-        if (eines::signal::threadCount_f() > 1 or threadedFunction_c::qThreadCount_f() > 0 or currentDownloadGlobalCount_f() > 0)
+        if (signalso::threadCount_f() > 1 or threadedFunction_c::qThreadCount_f() > 0 or currentDownloadGlobalCount_f() > 0)
         {
 //            QOUT_TS("qthreads counter " << QThreadCount_f() << endl);
-//            QOUT_TS("eines::signal::threadCount_f() " << eines::signal::threadCount_f() << endl);
+//            QOUT_TS("signalso::threadCount_f() " << signalso::threadCount_f() << endl);
             //change the interval and wait another cycle
             if (updateServer_pri->isListening())
             {
@@ -1665,7 +1665,7 @@ void mirrorConfig_c::mainLoop_f()
         {
 #ifdef DEBUGJOUVEN
             //QOUT_TS("qthreads counter " << qThreadCount_f() << endl);
-            //QOUT_TS("eines::signal::threadCount_f() " << eines::signal::threadCount_f() << endl);
+            //QOUT_TS("signalso::threadCount_f() " << signalso::threadCount_f() << endl);
             //QOUT_TS("QCoreApplication::exit();"<< endl);
 #endif
             QCoreApplication::exit();
