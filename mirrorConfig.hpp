@@ -65,7 +65,7 @@ struct downloadInfo_s
     {}
 };
 
-class mirrorConfigSourceDestinationMapping_c : public eines::baseClassQt_c
+class mirrorConfigSourceDestinationMapping_c : public baseClassQt_c
 {
     int_fast64_t id_pri = 0;
 
@@ -186,7 +186,7 @@ public:
     void printRemoteFileList_f() const;
 };
 
-class mirrorConfig_c : public eines::baseClassQt_c
+class mirrorConfig_c : public baseClassQt_c
 {
     //TODO, AFTER IT WORKS, make them optional and just use the defaults, printing, after, what the defaults are after the server/s is up
 
