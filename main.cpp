@@ -3,7 +3,7 @@
 //client/"destination": the program has a configuration of several remote file/directory paths mapped to local file/directory paths
 //the program can request a list (hash+size) of remote file/directories paths per mapping to a serer/"source" program,
 //this list it's tailored on the server/"source" program and client/"destination" will always recieve the same no matter the client side paths configurations,
-//except if the server configuration is changed but that doesn't depende on the client
+//except if the server configuration is changed but that doesn't depend on the client
 //client/"destination" also has a tcp server to recieve requests telling if anything has changed from the server/"source" program
 //so it can request the list again to check for changes.
 

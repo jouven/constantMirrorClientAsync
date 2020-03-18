@@ -12,7 +12,7 @@ class downloadClient_c : public QSslSocket
 {
     Q_OBJECT
 
-   downloadInfo_s downloadInfo_pri;
+    downloadInfo_s downloadInfo_pri;
 
     QFile file_pri;
     bool firstRead_pri = true;
